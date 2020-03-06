@@ -169,7 +169,7 @@ public abstract class CorrelationFieldScopeDecorator implements ScopeDecorator {
 
     boolean update(@Nullable String previous, String current) {
       if (!current.equals(previous)) {
-        put(current);
+        decorator.put(field, current);
         return true;
       }
       return false;
@@ -178,19 +178,11 @@ public abstract class CorrelationFieldScopeDecorator implements ScopeDecorator {
     boolean updateNullable(@Nullable String previous, @Nullable String current) {
       if (current != null) return update(previous, current);
       if (previous != null) {
-        remove();
+        decorator.remove(field);
         return true;
       } else {
         return false;
       }
-    }
-
-    void remove() {
-      decorator.remove(field);
-    }
-
-    void put(String value) {
-      decorator.put(field, value);
     }
   }
 
