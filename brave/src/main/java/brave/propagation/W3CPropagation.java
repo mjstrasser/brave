@@ -4,6 +4,7 @@ import java.util.Collections;
 import java.util.List;
 
 import static brave.propagation.Propagation.KeyFactory.STRING;
+import static brave.propagation.W3CFormat.writeW3CFormat;
 import static java.util.Arrays.asList;
 
 public final class W3CPropagation<K> implements Propagation<K> {
@@ -33,7 +34,23 @@ public final class W3CPropagation<K> implements Propagation<K> {
 
   @Override
   public <C> TraceContext.Injector<C> injector(Setter<C, K> setter) {
-    return null;
+    if (setter == null) throw new NullPointerException("setter == null");
+    return new W3CInjector<>(this, setter);
+  }
+
+  static final class W3CInjector<C, K> implements TraceContext.Injector<C> {
+    final W3CPropagation<K> propagation;
+    final Setter<C, K> setter;
+
+    W3CInjector(W3CPropagation<K> propagation, Setter<C, K> setter) {
+      this.propagation = propagation;
+      this.setter = setter;
+    }
+
+    @Override
+    public void inject(TraceContext traceContext, C carrier) {
+      setter.put(carrier, propagation.traceParentKey, writeW3CFormat(traceContext));
+    }
   }
 
   @Override
