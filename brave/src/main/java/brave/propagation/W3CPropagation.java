@@ -4,7 +4,7 @@ import java.util.Collections;
 import java.util.List;
 
 import static brave.propagation.Propagation.KeyFactory.STRING;
-import static brave.propagation.W3CFormat.writeW3CFormat;
+import static brave.propagation.W3CFormat.writeTraceParent;
 import static java.util.Arrays.asList;
 
 public final class W3CPropagation<K> implements Propagation<K> {
@@ -49,7 +49,11 @@ public final class W3CPropagation<K> implements Propagation<K> {
 
     @Override
     public void inject(TraceContext traceContext, C carrier) {
-      setter.put(carrier, propagation.traceParentKey, writeW3CFormat(traceContext));
+      setter.put(carrier, propagation.traceParentKey, writeTraceParent(traceContext));
+      TraceState traceState = traceContext.findExtra(TraceState.class);
+      if (traceState != null) {
+        setter.put(carrier, propagation.traceStateKey, traceState.value);
+      }
     }
   }
 
@@ -77,6 +81,13 @@ public final class W3CPropagation<K> implements Propagation<K> {
     @Override
     public String toString() {
       return "W3CPropagationFactory";
+    }
+  }
+
+  static final class TraceState {
+    String value;
+    TraceState(String value) {
+      this.value = value;
     }
   }
 }

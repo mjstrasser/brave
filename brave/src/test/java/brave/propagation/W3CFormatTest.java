@@ -13,54 +13,38 @@
  */
 package brave.propagation;
 
-import brave.Request;
-import brave.Span;
-import brave.internal.Platform;
-import brave.propagation.B3Propagation.Format;
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.powermock.core.classloader.annotations.PowerMockIgnore;
-import org.powermock.core.classloader.annotations.PrepareForTest;
-import org.powermock.modules.junit4.PowerMockRunner;
 
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.stream.Stream;
-
-import static brave.propagation.W3CFormat.writeW3CFormat;
+import static brave.propagation.W3CFormat.writeTraceParent;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoMoreInteractions;
-import static org.powermock.api.mockito.PowerMockito.*;
 
-@RunWith(PowerMockRunner.class)
-// Added to declutter console: tells power mock not to mess with implicit classes we aren't testing
-@PowerMockIgnore({"org.apache.logging.*", "javax.script.*"})
-@PrepareForTest({Platform.class, W3CFormat.class})
 public class W3CFormatTest {
   String traceId = "0000000000000000" + "0000000000000001";
   String parentId = "0000000000000002";
   String spanId = "0000000000000003";
 
-  Platform platform = mock(Platform.class);
-
-  @Before public void setupLogger() {
-    mockStatic(Platform.class);
-    when(Platform.get()).thenReturn(platform);
-  }
-
-  /** Either we asserted on the log messages or there weren't any */
-  @After public void ensureNothingLogged() {
-    verifyNoMoreInteractions(platform);
-  }
-
-  @Test public void writeW3CFormat_good() {
-    TraceContext context = TraceContext.newBuilder().traceIdHigh(0).traceId(1).spanId(3).build();
-    assertThat(writeW3CFormat(context))
+  @Test public void writeTraceParent_trace_span_sampled() {
+    TraceContext context = TraceContext.newBuilder()
+      .traceIdHigh(0).traceId(1).spanId(3).sampled(true)
+      .build();
+    assertThat(writeTraceParent(context))
       .isEqualTo(String.format("00-%s-%s-01", traceId, spanId));
+  }
+
+  @Test public void writeTraceParent_trace_span_not_sampled() {
+    TraceContext context = TraceContext.newBuilder()
+      .traceIdHigh(0).traceId(1).spanId(3).sampled(false)
+      .build();
+    assertThat(writeTraceParent(context))
+      .isEqualTo(String.format("00-%s-%s-00", traceId, spanId));
+  }
+
+  @Test public void writeTraceParent_trace_span_null_sampled() {
+    TraceContext context = TraceContext.newBuilder()
+      .traceIdHigh(0).traceId(1).spanId(3)
+      .build();
+    assertThat(writeTraceParent(context))
+      .isEqualTo(String.format("00-%s-%s-00", traceId, spanId));
   }
 
 }
