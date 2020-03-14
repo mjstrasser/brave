@@ -15,36 +15,69 @@ package brave.propagation;
 
 import org.junit.Test;
 
+import static brave.propagation.W3CFormat.parseTraceParent;
 import static brave.propagation.W3CFormat.writeTraceParent;
 import static org.assertj.core.api.Assertions.assertThat;
 
 public class W3CFormatTest {
-  String traceId = "0000000000000000" + "0000000000000001";
-  String parentId = "0000000000000002";
-  String spanId = "0000000000000003";
+  String traceId = "0000000000000001" + "0000000000000002";
+  String parentId = "0000000000000003";
+  String spanId = "0000000000000004";
 
-  @Test public void writeTraceParent_trace_span_sampled() {
+  @Test
+  public void writeTraceParent_trace_span_sampled() {
     TraceContext context = TraceContext.newBuilder()
-      .traceIdHigh(0).traceId(1).spanId(3).sampled(true)
+      .traceIdHigh(1).traceId(2).spanId(4).sampled(true)
       .build();
     assertThat(writeTraceParent(context))
       .isEqualTo(String.format("00-%s-%s-01", traceId, spanId));
   }
 
-  @Test public void writeTraceParent_trace_span_not_sampled() {
+  @Test
+  public void writeTraceParent_trace_span_not_sampled() {
     TraceContext context = TraceContext.newBuilder()
-      .traceIdHigh(0).traceId(1).spanId(3).sampled(false)
+      .traceIdHigh(1).traceId(2).spanId(4).sampled(false)
       .build();
     assertThat(writeTraceParent(context))
       .isEqualTo(String.format("00-%s-%s-00", traceId, spanId));
   }
 
-  @Test public void writeTraceParent_trace_span_null_sampled() {
+  @Test
+  public void writeTraceParent_trace_span_null_sampled() {
     TraceContext context = TraceContext.newBuilder()
-      .traceIdHigh(0).traceId(1).spanId(3)
+      .traceIdHigh(1).traceId(2).spanId(4)
       .build();
     assertThat(writeTraceParent(context))
       .isEqualTo(String.format("00-%s-%s-00", traceId, spanId));
   }
 
+  @Test
+  public void parseTraceParent_trace_span_sampled() {
+    String traceParent = "00-" + traceId + "-" + spanId + "-01";
+
+    TraceContext context = parse(traceParent);
+
+    assertThat(context).isNotNull();
+    assertThat(context.traceIdString()).isEqualTo(traceId);
+    assertThat(context.spanIdString()).isEqualTo(spanId);
+    assertThat(context.sampled()).isTrue();
+  }
+
+  @Test
+  public void parseTraceParent_trace_span_not_sampled() {
+    String traceParent = "00-" + traceId + "-" + spanId + "-00";
+
+    TraceContext context = parse(traceParent);
+
+    assertThat(context).isNotNull();
+    assertThat(context.traceIdString()).isEqualTo(traceId);
+    assertThat(context.spanIdString()).isEqualTo(spanId);
+    assertThat(context.sampled()).isFalse();
+  }
+
+  private TraceContext parse(String traceParent) {
+    TraceContextOrSamplingFlags parsed = parseTraceParent(traceParent);
+    if (parsed == null) throw new NullPointerException();
+    return parsed.context();
+  }
 }
