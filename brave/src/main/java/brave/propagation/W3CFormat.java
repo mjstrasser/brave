@@ -55,16 +55,15 @@ public class W3CFormat {
       W3C_FORMAT_VERSION, context.traceIdHigh, context.traceId, context.spanId, sampled);
   }
 
-  private static final Pattern TRACE_PARENT_PATTERN = Pattern.compile(
-    "^00-(?<traceId>[0-9a-f]{32})-(?<parentId>[0-9a-f]{16})-(?<traceFlags>0[01])$");
+  private static final Pattern TRACE_PARENT_PATTERN = Pattern.compile("^00-([0-9a-f]{32})-([0-9a-f]{16})-(0[01])$");
 
   private static W3CFormat buildFromTraceParent(String traceParent) {
     if (traceParent == null) return null;
     Matcher matcher = TRACE_PARENT_PATTERN.matcher(traceParent);
     if (matcher.matches()) {
-      String traceId = matcher.group("traceId");
-      String parentId = matcher.group("parentId");
-      String traceFlags = matcher.group("traceFlags");
+      String traceId = matcher.group(1);
+      String parentId = matcher.group(2);
+      String traceFlags = matcher.group(3);
       return new W3CFormat(traceId, parentId, Integer.parseInt(traceFlags));
     }
     return null;
