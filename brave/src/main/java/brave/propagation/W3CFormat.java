@@ -57,16 +57,16 @@ public class W3CFormat {
   }
 
   @Nullable
-  public static TraceContextOrSamplingFlags parseTraceParent(String traceParent) {
+  public static TraceContext parseTraceParent(String traceParent) {
 
     W3CFormat format = buildFromTraceParent(traceParent);
     if (format == null) return null;
 
-    return TraceContextOrSamplingFlags.create(TraceContext.newBuilder()
+    return TraceContext.newBuilder()
       .traceIdHigh(format.traceIdHigh())
       .traceId(format.traceId())
       .spanId(format.spanId())
       .sampled(format.sampled())
-      .build());
+      .build();
   }
 }

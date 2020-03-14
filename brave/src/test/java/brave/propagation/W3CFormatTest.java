@@ -55,7 +55,7 @@ public class W3CFormatTest {
   public void parseTraceParent_trace_span_sampled() {
     String traceParent = "00-" + traceId + "-" + spanId + "-01";
 
-    TraceContext context = parse(traceParent);
+    TraceContext context = parseTraceParent(traceParent);
 
     assertThat(context).isNotNull();
     assertThat(context.traceIdString()).isEqualTo(traceId);
@@ -67,17 +67,11 @@ public class W3CFormatTest {
   public void parseTraceParent_trace_span_not_sampled() {
     String traceParent = "00-" + traceId + "-" + spanId + "-00";
 
-    TraceContext context = parse(traceParent);
+    TraceContext context = parseTraceParent(traceParent);
 
     assertThat(context).isNotNull();
     assertThat(context.traceIdString()).isEqualTo(traceId);
     assertThat(context.spanIdString()).isEqualTo(spanId);
     assertThat(context.sampled()).isFalse();
-  }
-
-  private TraceContext parse(String traceParent) {
-    TraceContextOrSamplingFlags parsed = parseTraceParent(traceParent);
-    if (parsed == null) throw new NullPointerException();
-    return parsed.context();
   }
 }
