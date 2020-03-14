@@ -49,6 +49,7 @@ public final class W3CPropagation<K> implements Propagation<K> {
 
     @Override
     public void inject(TraceContext traceContext, C carrier) {
+      if (carrier == null) throw new NullPointerException("carrier == null");
       setter.put(carrier, propagation.traceParentKey, writeTraceParent(traceContext));
       TraceState traceState = traceContext.findExtra(TraceState.class);
       if (traceState != null) {
@@ -59,7 +60,38 @@ public final class W3CPropagation<K> implements Propagation<K> {
 
   @Override
   public <C> TraceContext.Extractor<C> extractor(Getter<C, K> getter) {
-    return null;
+    if (getter == null) throw new NullPointerException("getter == null");
+    return new W3CExtractor<>(this, getter);
+  }
+
+  static final class W3CExtractor<C, K> implements TraceContext.Extractor<C> {
+    final W3CPropagation<K> propagation;
+    final Getter<C, K> getter;
+
+    W3CExtractor(W3CPropagation<K> propagation, Getter<C, K> getter) {
+      this.propagation = propagation;
+      this.getter = getter;
+    }
+
+    @Override
+    public TraceContextOrSamplingFlags extract(C carrier) {
+      if (carrier == null) throw new NullPointerException("carrier == null");
+
+      String traceParent = getter.get(carrier, propagation.traceParentKey);
+      TraceContext context = W3CFormat.parseTraceParent(traceParent);
+      if (context == null) return TraceContextOrSamplingFlags.EMPTY;
+
+      String traceState = getter.get(carrier, propagation.traceStateKey);
+      if (traceState == null) {
+        return TraceContextOrSamplingFlags.create(context);
+      } else {
+        return TraceContextOrSamplingFlags.create(
+          context.toBuilder()
+            .extra(Collections.singletonList(new TraceState(traceState)))
+            .build()
+        );
+      }
+    }
   }
 
   static final class Factory extends Propagation.Factory {
@@ -85,7 +117,8 @@ public final class W3CPropagation<K> implements Propagation<K> {
   }
 
   static final class TraceState {
-    String value;
+    final String value;
+
     TraceState(String value) {
       this.value = value;
     }

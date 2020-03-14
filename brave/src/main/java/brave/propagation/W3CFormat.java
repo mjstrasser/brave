@@ -46,6 +46,7 @@ public class W3CFormat {
     "^00-(?<traceId>[0-9a-f]{32})-(?<parentId>[0-9a-f]{16})-(?<traceFlags>0[01])$");
 
   private static W3CFormat buildFromTraceParent(String traceParent) {
+    if (traceParent == null) return null;
     Matcher matcher = TRACE_PARENT_PATTERN.matcher(traceParent);
     if (matcher.matches()) {
       String traceId = matcher.group("traceId");

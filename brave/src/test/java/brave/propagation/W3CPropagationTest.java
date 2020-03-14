@@ -1,6 +1,7 @@
 package brave.propagation;
 
 import brave.internal.Platform;
+import brave.propagation.W3CPropagation.TraceState;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -25,13 +26,9 @@ import static org.powermock.api.mockito.PowerMockito.*;
 @PowerMockIgnore({"org.apache.logging.*", "javax.script.*"})
 @PrepareForTest({Platform.class, W3CPropagation.class})
 public class W3CPropagationTest {
-  String traceId = "0000000000000000" + "0000000000000001";
-  String parentId = "0000000000000002";
-  String spanId = "0000000000000003";
-
-  TraceContext context = TraceContext.newBuilder()
-    .traceIdHigh(0).traceId(1).parentId(2).spanId(3)
-    .build();
+  String traceId = "0000000000000001" + "0000000000000002";
+  String parentId = "0000000000000003";
+  String spanId = "0000000000000004";
 
   Propagation<String> propagation = W3CPropagation.W3C_STRING;
   Platform platform = mock(Platform.class);
@@ -61,7 +58,7 @@ public class W3CPropagationTest {
   public void inject_withoutTraceState() {
     propagation = W3CPropagation.newFactory().create(Propagation.KeyFactory.STRING);
     TraceContext traceContext = TraceContext.newBuilder()
-      .traceIdHigh(0).traceId(1).spanId(3).sampled(true)
+      .traceIdHigh(1).traceId(2).spanId(4).sampled(true)
       .build();
     Map<String, String> request = new LinkedHashMap<>();
 
@@ -77,8 +74,8 @@ public class W3CPropagationTest {
     propagation = W3CPropagation.newFactory().create(Propagation.KeyFactory.STRING);
     String randomState = UUID.randomUUID().toString();
     TraceContext traceContext = TraceContext.newBuilder()
-      .traceIdHigh(0).traceId(1).spanId(3).sampled(false)
-      .extra(Collections.singletonList(new W3CPropagation.TraceState(randomState)))
+      .traceIdHigh(1).traceId(2).spanId(4).sampled(false)
+      .extra(Collections.singletonList(new TraceState(randomState)))
       .build();
     Map<String, String> request = new LinkedHashMap<>();
 
@@ -88,5 +85,55 @@ public class W3CPropagationTest {
       entry(TRACE_PARENT_NAME, "00-" + traceId + "-" + spanId + "-00"),
       entry(TRACE_STATE_NAME, randomState)
     );
+  }
+
+  @Test
+  public void extract_withoutTraceParent() {
+    propagation = W3CPropagation.newFactory().create(Propagation.KeyFactory.STRING);
+    Map<String, String> headers = Collections.emptyMap();
+
+    TraceContext context = parse(headers);
+
+    assertThat(context).isNull();
+  }
+
+  @Test
+  public void extract_withoutTraceState() {
+    propagation = W3CPropagation.newFactory().create(Propagation.KeyFactory.STRING);
+    Map<String, String> headers = Collections.singletonMap(
+      TRACE_PARENT_NAME, "00-" + traceId + "-" + spanId + "-01"
+    );
+
+    TraceContext context = parse(headers);
+
+    assertThat(context.traceIdString()).isEqualTo(traceId);
+    assertThat(context.spanIdString()).isEqualTo(spanId);
+    assertThat(context.sampled()).isTrue();
+    assertThat(context.extra()).isEmpty();
+  }
+
+  @Test
+  public void extract_withTraceState() {
+    propagation = W3CPropagation.newFactory().create(Propagation.KeyFactory.STRING);
+    String traceState = UUID.randomUUID().toString();
+    Map<String, String> headers = new LinkedHashMap<>();
+    headers.put(TRACE_PARENT_NAME, "00-" + traceId + "-" + spanId + "-01");
+    headers.put(TRACE_STATE_NAME, traceState);
+
+    TraceContext context = parse(headers);
+
+    assertThat(context.traceIdString()).isEqualTo(traceId);
+    assertThat(context.spanIdString()).isEqualTo(spanId);
+    assertThat(context.sampled()).isTrue();
+    assertThat(context.extra()).size().isEqualTo(1);
+    assertThat(context.extra().get(0)).isInstanceOf(TraceState.class);
+    TraceState state = (TraceState) context.extra().get(0);
+    assertThat(state.value).isEqualTo(traceState);
+  }
+
+  private TraceContext parse(Map<String, String> headers) {
+    TraceContextOrSamplingFlags result = propagation.<Map<String, String>>extractor(Map::get).extract(headers);
+    assertThat(result).isNotNull();
+    return result.context();
   }
 }
