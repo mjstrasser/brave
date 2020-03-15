@@ -52,6 +52,14 @@ public class W3CFormatTest {
   }
 
   @Test
+  public void parseTraceParent_return_null_on_bad_formats() {
+    assertThat(parseTraceParent("00-badformat-badformat-01")).isNull();
+    assertThat(parseTraceParent("00-c68aa450c565e733c2fd05bd52771467-391a0978a417ac9b-01")).isNotNull();
+    assertThat(parseTraceParent("01-c68aa450c565e733c2fd05bd52771467-391a0978a417ac9b-01")).isNull();
+    assertThat(parseTraceParent("00-c68aa450c565e733c2fd05bd52771467-391a0978a417ac9b-03")).isNull();
+  }
+
+  @Test
   public void parseTraceParent_trace_span_sampled() {
     String traceParent = "00-" + traceId + "-" + spanId + "-01";
 
